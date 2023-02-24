@@ -26,6 +26,13 @@ struct ContentView: View {
     @State private var showingScore = false
     @State private var scoreTitle = ""
     @State private var scoreCount = 0
+    @State private var animationAmount = 0.0
+    
+    @State private var animateCorrect = 0.0
+    @State private var animateOpacity = 1.0
+    @State private var besidesTheCorrect = false
+    @State private var besidesTheWrong = false
+    @State private var selectedFlag = 0
     
     
     @State private var countries = ["Estonia", "France", "Germany", "Ireland", "Italy", "Nigeria", "Poland", "Russia", "Spain", "UK", "US"].shuffled()
@@ -47,7 +54,7 @@ struct ContentView: View {
                         Text("Tap the flag of")
                             .foregroundStyle(.secondary)
                             .font(.subheadline.weight(.heavy))
-                            
+                        
                         Text(countries[correctAnswer])
                         
                             .font(.largeTitle.weight(.semibold))
@@ -55,12 +62,29 @@ struct ContentView: View {
                     }
                     ForEach(0..<3) {number in
                         Button {
+                            
                             flagTapped(number)
+                            withAnimation(.easeIn(duration: 1.5)) {
+                                animationAmount += 360
+                            }
+                            
                         }label: {
                             Image(countries[number])
                                 .renderingMode(.original)
                                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .circular))
                                 .shadow(radius: 100)
+                            // Animate the flag when the user tap the correct one:
+                            // Rotate the correct flag
+                                .rotation3DEffect(.degrees(number == self.correctAnswer ? self.animateCorrect : 0), axis: (x: 1, y: 1, z: 0))
+                            // Reduce opacity of the other flags to 25%
+                                .opacity(number != self.correctAnswer && self.besidesTheCorrect ? self.animateOpacity : 1)
+                            
+                            // Animate the flag when the user tap the wrong one:
+                            // Create a red background to the wrong flag
+                                .background(self.besidesTheWrong && self.selectedFlag == number ? Capsule(style: .circular).fill(Color.red).blur(radius: 50) : Capsule(style: .circular).fill(Color.clear).blur(radius: 0))
+                            // Reduce opacity of the other flags to 25% (including the correct one)
+                                .opacity(self.besidesTheWrong && self.selectedFlag != number ? self.animateOpacity : 1)
+                            
                         }
                     }
                 }
@@ -91,6 +115,8 @@ struct ContentView: View {
     }
     
     func askQuestion() {
+        besidesTheCorrect = false
+        besidesTheWrong = false
         countries.shuffle()
         correctAnswer = Int.random(in: 0...3)
     }
@@ -99,11 +125,22 @@ struct ContentView: View {
         if number == correctAnswer {
             scoreTitle = "Correct!"
             scoreCount += 1
+            withAnimation(.interpolatingSpring(stiffness: 7, damping: 7)) {
+                self.animateCorrect += 360
+                self.animateOpacity = 0.25
+                self.besidesTheCorrect = true
+            }
         } else {
             scoreTitle = "Maybe next time :("
+            withAnimation(.interpolatingSpring(stiffness: 7, damping: 7)) {
+                self.animateOpacity = 0.5
+                self.besidesTheWrong = true
+            }
         }
-        
-        showingScore = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            showingScore = true
+            
+        }
     }
     
     
